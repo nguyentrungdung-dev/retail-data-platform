@@ -1,0 +1,178 @@
+version: '3.9'
+
+# ════════════════════════════════════════════════════════════════
+# Retail Data Platform — Docker Compose
+# Chạy: docker-compose up -d
+# Stop: docker-compose down
+# Reset: docker-compose down -v  (xóa data volumes)
+# ════════════════════════════════════════════════════════════════
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.1
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+    # Kết nối đến Data Warehouse
+    RETAIL_DB_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-dwh:5432/${POSTGRES_DB}
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./ingestion:/opt/airflow/ingestion
+    - ./dbt_project:/opt/airflow/dbt_project
+    - airflow-logs:/opt/airflow/logs
+    - ./.env:/opt/airflow/.env
+  depends_on:
+    postgres-airflow:
+      condition: service_healthy
+
+services:
+
+  # ─── 1. DATA WAREHOUSE ──────────────────────────────────────────
+  postgres-dwh:
+    image: postgres:15-alpine
+    container_name: retail_dwh
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-retail}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-retail123}
+      POSTGRES_DB: ${POSTGRES_DB:-retail_dw}
+    ports:
+      - "5434:5432"
+    volumes:
+      - dwh-data:/var/lib/postgresql/data
+      - ./infra/init_db.sql:/docker-entrypoint-initdb.d/01_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-retail}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── 2. AIRFLOW METADATA DB ─────────────────────────────────────
+  postgres-airflow:
+    image: postgres:15-alpine
+    container_name: retail_airflow_meta
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-meta:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── 3. DATA LAKE (S3-compatible) ───────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: retail_datalake
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── 4. AIRFLOW WEBSERVER ────────────────────────────────────────
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: retail_airflow_web
+    command: webserver
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ─── 5. AIRFLOW SCHEDULER ────────────────────────────────────────
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: retail_airflow_scheduler
+    command: scheduler
+    restart: unless-stopped
+
+  # ─── 6. AIRFLOW INIT (chạy 1 lần) ───────────────────────────────
+  airflow-init:
+    <<: *airflow-common
+    container_name: retail_airflow_init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@retail.local \
+          --password admin
+    restart: on-failure
+
+  # ─── 7. BI DASHBOARD (Metabase) ─────────────────────────────────
+  metabase:
+    image: metabase/metabase:latest
+    container_name: retail_metabase
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: ${POSTGRES_USER:-retail}
+      MB_DB_PASS: ${POSTGRES_PASSWORD:-retail123}
+      MB_DB_HOST: postgres-dwh
+    depends_on:
+      postgres-dwh:
+        condition: service_healthy
+
+  # ─── 8. PGADMIN (Database GUI) ──────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: retail_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@retail.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+# ════════════════════════════════════════════════════════════════
+volumes:
+  dwh-data:
+  airflow-meta:
+  airflow-logs:
+  minio-data:
+  pgadmin-data:
+
+# ════════════════════════════════════════════════════════════════
+# SERVICES SUMMARY:
+# ┌─────────────────┬──────────────────────────────┐
+# │ Service         │ URL                          │
+# ├─────────────────┼──────────────────────────────┤
+# │ PostgreSQL DWH  │ localhost:5432               │
+# │ Airflow UI      │ http://localhost:8080        │
+# │ MinIO Console   │ http://localhost:9001        │
+# │ Metabase BI     │ http://localhost:3000        │
+# │ pgAdmin         │ http://localhost:5050        │
+# └─────────────────┴──────────────────────────────┘

@@ -1,0 +1,43 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: public
+    description: "Dữ liệu gốc từ các nguồn ingestion"
+    tables:
+      - name: raw_orders
+        description: "Đơn hàng từ POS / Excel / KiotViet"
+        columns:
+          - name: order_id
+            description: "Mã đơn hàng, unique"
+            tests:
+              - unique
+              - not_null
+          - name: order_date
+            tests:
+              - not_null
+          - name: qty_sold
+            tests:
+              - not_null
+          - name: selling_price
+            tests:
+              - not_null
+
+      - name: raw_products
+        description: "Danh mục sản phẩm"
+        columns:
+          - name: product_code
+            tests:
+              - unique
+              - not_null
+
+      - name: raw_customers
+        description: "Thông tin khách hàng"
+        columns:
+          - name: customer_id
+            tests:
+              - unique
+              - not_null
+
+      - name: raw_inventory
+        description: "Snapshot tồn kho theo ngày"

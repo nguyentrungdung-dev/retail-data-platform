@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: mart_sales_daily
+    description: "Doanh thu tổng hợp theo ngày"
+    columns:
+      - name: date
+        tests:
+          - not_null
+
+      - name: total_revenue
+        tests:
+          - not_null
+
+      - name: total_orders
+        tests:
+          - not_null
+
+  - name: mart_rfm
+    description: "Phân khúc khách hàng RFM"
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+
+      - name: segment
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['CHAMPIONS', 'LOYAL', 'NEW CUSTOMER',
+                       'POTENTIAL', 'AT RISK', 'LOST', 'OTHERS']
+
+      - name: r_score
+        tests:
+          - not_null
+
+      - name: f_score
+        tests:
+          - not_null
+
+      - name: m_score
+        tests:
+          - not_null
+
+  - name: mart_product_performance
+    description: "Hiệu suất sản phẩm 90 ngày"
+    columns:
+      - name: product_c
+          - unique
+          - not_null
+
+      - name: sales_velocity
+        tests:
+          - accepted_values:
+              values: ['BÁN CHẠY', 'BÌNH THƯỜNG', 'CHẬM', 'CHẬM BÁN']

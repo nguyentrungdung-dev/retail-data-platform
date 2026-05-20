@@ -1,0 +1,22 @@
+# Ingestion
+pandas==2.2.3
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+requests==2.31.0
+python-dotenv==1.0.0
+openpyxl==3.1.2
+
+# dbt (1.7.x yêu cầu protobuf 4.x — không tương thích protobuf >= 5)
+dbt-core==1.7.4
+dbt-postgres==1.7.4
+protobuf==4.25.5
+
+# Quality & Testing
+pytest==7.4.4
+black==24.1.1
+flake8==7.0.0
+isort==5.13.2
+
+# Utils
+loguru==0.7.2
+click==8.1.7

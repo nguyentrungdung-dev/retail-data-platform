@@ -1,0 +1,57 @@
+version: 2
+
+models:
+  - name: stg_orders
+    description: "Đơn hàng đã clean và tính toán revenue/profit"
+    columns:
+      - name: order_line_key
+        description: "Surrogate key = md5(order_id + product_code)"
+        tests:
+          - unique
+          - not_null
+
+      - name: order_id
+        tests:
+          - not_null
+
+      - name: order_date
+        tests:
+          - not_null
+
+      - name: product_code
+        tests:
+          - not_null
+
+      - name: qty_sold
+        tests:
+          - not_null
+
+      - name: revenue
+        tests:
+          - not_null
+
+      - name: order_type
+        tests:
+          - accepted_values:
+              values: ['retail', 'wholesale', 'contractor', 'unknown']
+
+      - name: payment_method
+        tests:
+          - accepted_values:
+              values: ['Tiền mặt', 'Chuyển khoản', 'Trả góp', 'unknown']
+
+  - name: stg_products
+    description: "Danh mục sản phẩm đã chuẩn hóa"
+    columns:
+      - name: product_code
+        tests:
+          - unique
+          - not_null
+
+      - name: list_price
+        tests:
+          - not_null
+
+      - name: cost_price
+        tests:
+          - not_null

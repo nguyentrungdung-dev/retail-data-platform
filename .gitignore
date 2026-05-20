@@ -1,0 +1,27 @@
+# Môi trường
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# dbt
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+
+# Data files (không commit data lên Git)
+*.csv
+*.xlsx
+*.parquet
+
+# Logs
+logs/
+*.log
+
+# macOS
+.DS_Store
+
+# VSCode / Cursor
+.vscode/settings.json
+.cursor/
