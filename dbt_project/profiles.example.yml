@@ -1,0 +1,17 @@
+# Template — copy thành profiles.yml và điền password thực tế
+# cp profiles.example.yml profiles.yml
+#
+# profiles.yml đã được .gitignore — KHÔNG commit lên git (chứa secret)
+
+dbt_project:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: postgres-dwh   # Trong Docker network. Nếu chạy dbt từ host: dùng localhost
+      port: 5434           # Đổi sang 5432 nếu chạy trong container
+      user: retail
+      password: CHANGE_ME  # ← Lấy từ .env (POSTGRES_PASSWORD)
+      dbname: retail_dw
+      schema: public
+      threads: 4
