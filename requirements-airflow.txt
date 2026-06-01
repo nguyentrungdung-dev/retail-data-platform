@@ -1,0 +1,11 @@
+# Add-on packages cho Airflow runtime
+# QUY TẮC:
+#  - CHỈ thêm package mà Airflow chưa có sẵn và DAG cần
+#  - Đừng pin sqlalchemy / click / psycopg2-binary / requests / pandas /
+#    protobuf — Airflow constraints đã quản lý
+#  - dbt-core, dbt-postgres KHÔNG cài ở đây — xem requirements-dbt.txt
+#    (cài trong virtualenv riêng /opt/dbt-venv để tránh dependency conflict)
+
+openpyxl
+python-dotenv
+loguru

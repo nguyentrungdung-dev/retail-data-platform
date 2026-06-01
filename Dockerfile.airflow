@@ -1,0 +1,36 @@
+# ════════════════════════════════════════════════════════════════
+# Custom Airflow image — Airflow 2.9.1 + dbt-core 1.7.4
+#
+# Chiến lược: KHÔNG cài dbt vào cùng site-packages với Airflow
+# (vì pin SQLAlchemy / protobuf của hai bên xung đột nhau).
+# Thay vào đó, dbt sống trong virtualenv tách biệt: /opt/dbt-venv
+# DAG gọi `/opt/dbt-venv/bin/dbt build` qua BashOperator.
+# ════════════════════════════════════════════════════════════════
+FROM apache/airflow:2.9.1-python3.11
+
+ARG AIRFLOW_VERSION=2.9.1
+ARG PYTHON_VERSION=3.11
+ARG CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
+
+# ─── 1. Add-ons cho Airflow runtime (DAG dùng) ──────────────────
+# Cài chung site-packages của Airflow, BẮT BUỘC dùng constraints
+# để không kéo SQLAlchemy 2.x ghi đè và đập vỡ Airflow ORM.
+USER airflow
+COPY requirements-airflow.txt /requirements-airflow.txt
+RUN pip install --no-cache-dir \
+      -r /requirements-airflow.txt \
+      --constraint "${CONSTRAINT_URL}"
+
+# ─── 2. Virtualenv riêng cho dbt ────────────────────────────────
+# venv tách biệt → dbt tự do resolve dependencies (SQLAlchemy 2.x,
+# protobuf 4.25.5, mashumaro, agate, ...) mà KHÔNG đụng Airflow.
+# Bash operator trong DAG sẽ gọi /opt/dbt-venv/bin/dbt.
+USER root
+RUN mkdir -p /opt/dbt-venv && chown airflow:0 /opt/dbt-venv
+USER airflow
+
+COPY requirements-dbt.txt /requirements-dbt.txt
+RUN python -m venv /opt/dbt-venv \
+ && /opt/dbt-venv/bin/pip install --no-cache-dir --upgrade pip \
+ && /opt/dbt-venv/bin/pip install --no-cache-dir -r /requirements-dbt.txt \
+ && /opt/dbt-venv/bin/dbt --version

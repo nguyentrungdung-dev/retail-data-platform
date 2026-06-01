@@ -1,0 +1,9 @@
+# Dependencies cho virtualenv dbt — /opt/dbt-venv
+# venv này hoàn toàn tách biệt với Airflow, không dùng constraints của Airflow.
+#
+# protobuf<5.0: dbt-core 1.7.4 dùng MessageToJson(including_default_value_fields=...)
+# — API này đã bị remove từ protobuf 5.0+. Không pin sẽ kéo về 7.x → vỡ runtime.
+
+dbt-core==1.7.4
+dbt-postgres==1.7.4
+protobuf>=4.21.0,<5.0.0

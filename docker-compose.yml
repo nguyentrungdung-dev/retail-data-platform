@@ -1,5 +1,3 @@
-version: '3.9'
-
 # ════════════════════════════════════════════════════════════════
 # Retail Data Platform — Docker Compose
 # Chạy: docker-compose up -d
@@ -8,7 +6,13 @@ version: '3.9'
 # ════════════════════════════════════════════════════════════════
 
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.9.1
+  # Build 1 image duy nhất, share cho cả webserver / scheduler / init.
+  # Không có dòng `image:` thống nhất → compose sẽ tạo 3 image riêng,
+  # chỉ build 1 service không cập nhật service kia (gây "desync image").
+  image: retail-data-platform-airflow:latest
+  build:
+    context: .
+    dockerfile: Dockerfile.airflow
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
@@ -22,6 +26,7 @@ x-airflow-common: &airflow-common
     - ./dags:/opt/airflow/dags
     - ./ingestion:/opt/airflow/ingestion
     - ./dbt_project:/opt/airflow/dbt_project
+    - ./data:/opt/airflow/data
     - airflow-logs:/opt/airflow/logs
     - ./.env:/opt/airflow/.env
   depends_on:
