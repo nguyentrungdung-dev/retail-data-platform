@@ -1,0 +1,52 @@
+name: "4. Khách VIP"
+description: "Phân khúc RFM, danh sách VIP, khách có nguy cơ rời"
+
+cards:
+  - name: "Số khách VIP"
+    visualization: scalar
+    position: { row: 0, col: 0, size_x: 4, size_y: 3 }
+    sql: |
+      select count(*) as so_vip
+      from mart_rfm
+      where is_vip = true
+
+  - name: "Doanh thu từ VIP (12 tháng)"
+    visualization: scalar
+    position: { row: 0, col: 4, size_x: 4, size_y: 3 }
+    sql: |
+      select sum(total_revenue) as doanh_thu
+      from mart_rfm
+      where is_vip = true
+
+  - name: "Khách có nguy cơ rời"
+    visualization: scalar
+    position: { row: 0, col: 8, size_x: 4, size_y: 3 }
+    sql: |
+      select count(*) as so_khach
+      from mart_rfm
+      where segment = 'AT RISK'
+
+  - name: "Phân bố RFM segment"
+    visualization: pie
+    position: { row: 3, col: 0, size_x: 6, size_y: 6 }
+    sql: |
+      select segment, count(*) as so_khach
+      from mart_rfm
+      group by segment
+      order by so_khach desc
+
+  - name: "Top 20 khách VIP"
+    visualization: table
+    position: { row: 3, col: 6, size_x: 6, size_y: 6 }
+    sql: |
+      select
+        customer_id as "Mã KH",
+        segment as "Phân khúc",
+        order_count as "Số đơn",
+        total_revenue as "Tổng chi tiêu",
+        recency_days as "Lần cuối (ngày)",
+        last_order_date as "Đơn gần nhất"
+      from mart_rfm
+      where is_vip = true
+      order by total_revenue desc
+      limit 20

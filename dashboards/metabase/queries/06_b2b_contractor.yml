@@ -1,0 +1,53 @@
+name: "6. B2B Contractor"
+description: "Doanh thu từ kênh sỉ/contractor, top khách B2B"
+
+cards:
+  - name: "Doanh thu B2B (30 ngày)"
+    visualization: scalar
+    position: { row: 0, col: 0, size_x: 6, size_y: 3 }
+    sql: |
+      select coalesce(sum(total_revenue), 0) as doanh_thu
+      from mart_sales_daily
+      where order_type in ('wholesale', 'contractor')
+        and date >= current_date - interval '30 days'
+
+  - name: "Số đơn B2B (30 ngày)"
+    visualization: scalar
+    position: { row: 0, col: 6, size_x: 6, size_y: 3 }
+    sql: |
+      select coalesce(sum(total_orders), 0) as so_don
+      from mart_sales_daily
+      where order_type in ('wholesale', 'contractor')
+        and date >= current_date - interval '30 days'
+
+  - name: "B2C vs B2B — trend doanh thu 90 ngày"
+    visualization: line
+    position: { row: 3, col: 0, size_x: 12, size_y: 6 }
+    sql: |
+      select
+        date,
+        case when order_type = 'retail' then 'B2C' else 'B2B' end as kenh,
+        sum(total_revenue) as doanh_thu
+      from mart_sales_daily
+      where date >= current_date - interval '90 days'
+      group by date, kenh
+      order by date
+
+  - name: "Top 20 khách B2B (90 ngày)"
+    visualization: table
+    position: { row: 9, col: 0, size_x: 12, size_y: 6 }
+    sql: |
+      select
+        customer_id as "Mã KH",
+        count(distinct order_id) as "Số đơn",
+        sum(qty_sold) as "SL mua",
+        round(sum(revenue)) as "Tổng chi tiêu",
+        round(avg(revenue)) as "Avg đơn",
+        max(order_date_day) as "Đơn gần nhất"
+      from stg_orders
+      where order_type in ('wholesale', 'contractor')
+        and customer_id != 'UNKNOWN'
+        and order_date >= current_date - interval '90 days'
+      group by customer_id
+      order by "Tổng chi tiêu" desc
+      limit 20

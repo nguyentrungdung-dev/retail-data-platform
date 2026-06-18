@@ -84,50 +84,20 @@ def extract_and_load(**context):
     return total_stats
 
 
-def send_success_notification(**context):
-    """Gửi thông báo thành công kèm stats."""
+def _notify_success_task(**context):
+    """Wrapper PythonOperator để task `notify_success` xuất hiện trên DAG graph."""
     import sys
     sys.path.insert(0, "/opt/airflow")
-
-    from dags.utils.alerts import send_zalo_message
-    from loguru import logger
-
-    etl_stats = context["ti"].xcom_pull(
-        key="etl_stats",
-        task_ids="extract_and_load"
-    ) or {}
-
-    exec_date = context["ds"]
-    message = (
-        f"✅ Pipeline hoàn thành!\n"
-        f"Ngày chạy: {exec_date}\n"
-        f"📥 Inserted: {etl_stats.get('inserted', 0)}\n"
-        f"🔄 Updated:  {etl_stats.get('updated', 0)}\n"
-        f"⏭ Skipped:  {etl_stats.get('skipped', 0)}\n"
-        f"📊 dbt models đã refresh thành công"
-    )
-    logger.info(message)
-    send_zalo_message(message)
+    from dags.utils.alerts import notify_success
+    notify_success(context)
 
 
-def send_failure_notification(**context):
-    """Gửi thông báo lỗi."""
+def _notify_failure_callback(context):
+    """DAG-level on_failure_callback: bắt mọi task fail (sau khi hết retry)."""
     import sys
     sys.path.insert(0, "/opt/airflow")
-
-    from dags.utils.alerts import send_zalo_message
-
-    task_id   = context["task_instance"].task_id
-    exec_date = context["ds"]
-    error     = str(context.get("exception", "Unknown"))[:300]
-
-    message = (
-        f"❌ Pipeline lỗi!\n"
-        f"Task: {task_id}\n"
-        f"Ngày: {exec_date}\n"
-        f"Lỗi: {error}"
-    )
-    send_zalo_message(message)
+    from dags.utils.alerts import notify_failure
+    notify_failure(context)
 
 
 # ── DAG DEFINITION ──────────────────────────────────────────────
@@ -140,7 +110,7 @@ with DAG(
     catchup=False,
     max_active_runs=1,
     tags=["retail", "etl", "daily"],
-    on_failure_callback=send_failure_notification,
+    on_failure_callback=_notify_failure_callback,
 ) as dag:
 
     # ── TASK 1: Kiểm tra nguồn dữ liệu
@@ -171,10 +141,10 @@ with DAG(
         execution_timeout=timedelta(minutes=20),
     )
 
-    # ── TASK 4: Thông báo thành công
+    # ── TASK 4: Thông báo thành công (Email + Zalo)
     t4_notify = PythonOperator(
         task_id="notify_success",
-        python_callable=send_success_notification,
+        python_callable=_notify_success_task,
         trigger_rule="all_success",   # chỉ chạy nếu tất cả task trước OK
     )
 

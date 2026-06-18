@@ -3,6 +3,13 @@
 -- Raw layer: dữ liệu gốc từ nguồn (KiotViet, file Excel, ...)
 -- ════════════════════════════════════════════
 
+-- ── Tạo database phụ cho Metabase metadata ──
+-- Metabase cần 1 database riêng để lưu user/dashboards/queries của nó.
+-- Compose set MB_DB_DBNAME=metabase nên tên này là bắt buộc.
+-- DO block để idempotent: chạy lại không lỗi.
+SELECT 'CREATE DATABASE metabase'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'metabase')\gexec
+
 -- ── Đơn hàng (mỗi dòng = 1 line-item) ──
 CREATE TABLE IF NOT EXISTS raw_orders (
     order_id        VARCHAR(50) PRIMARY KEY,

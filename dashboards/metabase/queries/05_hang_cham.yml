@@ -1,0 +1,51 @@
+name: "5. Hàng chậm"
+description: "Sản phẩm bán chậm/đã chết, tồn đọng cần xử lý"
+
+cards:
+  - name: "SP CHẬM BÁN / HÀNG CHẾT"
+    visualization: scalar
+    position: { row: 0, col: 0, size_x: 6, size_y: 3 }
+    sql: |
+      select count(*) as so_sp
+      from mart_inventory_health
+      where stock_status in ('CHẬM BÁN', 'HÀNG CHẾT')
+
+  - name: "Tổng số lượng tồn đọng"
+    visualization: scalar
+    position: { row: 0, col: 6, size_x: 6, size_y: 3 }
+    sql: |
+      select coalesce(sum(qty_on_hand), 0) as ton_dong
+      from mart_inventory_health
+      where stock_status in ('CHẬM BÁN', 'HÀNG CHẾT')
+
+  - name: "HÀNG CHẾT — không bán >180 ngày"
+    visualization: table
+    position: { row: 3, col: 0, size_x: 12, size_y: 6 }
+    sql: |
+      select
+        product_code as "Mã SP",
+        product_name as "Tên SP",
+        category_l1 as "Nhóm",
+        qty_on_hand as "Tồn",
+        days_since_last_sale as "Số ngày không bán",
+        last_sale_date as "Lần bán cuối"
+      from mart_inventory_health
+      where stock_status = 'HÀNG CHẾT'
+      order by qty_on_hand desc
+      limit 20
+
+  - name: "SP có velocity CHẬM (90 ngày)"
+    visualization: table
+    position: { row: 9, col: 0, size_x: 12, size_y: 6 }
+    sql: |
+      select
+        product_name as "Tên SP",
+        category_l1 as "Nhóm",
+        sales_velocity as "Tốc độ",
+        total_qty_sold as "Đã bán",
+        days_since_last_sale as "Ngày không bán",
+        total_revenue as "Doanh thu 90d"
+      from mart_product_performance
+      where sales_velocity in ('CHẬM', 'CHẬM BÁN')
+      order by days_since_last_sale desc
+      limit 20

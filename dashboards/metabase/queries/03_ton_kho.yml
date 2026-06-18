@@ -1,0 +1,52 @@
+name: "3. Tồn kho"
+description: "Sức khỏe tồn kho, cảnh báo hết hàng/cần nhập"
+
+cards:
+  - name: "SP đang HẾT HÀNG"
+    visualization: scalar
+    position: { row: 0, col: 0, size_x: 4, size_y: 3 }
+    sql: |
+      select count(*) as so_sp
+      from mart_inventory_health
+      where stock_status = 'HẾT HÀNG'
+
+  - name: "SP SẮP HẾT / CẦN NHẬP"
+    visualization: scalar
+    position: { row: 0, col: 4, size_x: 4, size_y: 3 }
+    sql: |
+      select count(*) as so_sp
+      from mart_inventory_health
+      where stock_status in ('SẮP HẾT', 'CẦN NHẬP')
+
+  - name: "Tổng SP cần xử lý"
+    visualization: scalar
+    position: { row: 0, col: 8, size_x: 4, size_y: 3 }
+    sql: |
+      select count(*) as so_sp
+      from mart_inventory_health
+      where need_reorder = true
+
+  - name: "Phân bố trạng thái tồn kho"
+    visualization: pie
+    position: { row: 3, col: 0, size_x: 6, size_y: 6 }
+    sql: |
+      select stock_status, count(*) as so_san_pham
+      from mart_inventory_health
+      group by stock_status
+      order by so_san_pham desc
+
+  - name: "Top 20 SP cần nhập gấp"
+    visualization: table
+    position: { row: 3, col: 6, size_x: 6, size_y: 6 }
+    sql: |
+      select
+        product_code as "Mã SP",
+        product_name as "Tên SP",
+        qty_on_hand as "Tồn",
+        days_of_stock as "Đủ bán (ngày)",
+        avg_daily_sales_30d as "TB bán/ngày",
+        stock_status as "Trạng thái"
+      from mart_inventory_health
+      where need_reorder = true
+      order by days_of_stock asc nulls first
+      limit 20

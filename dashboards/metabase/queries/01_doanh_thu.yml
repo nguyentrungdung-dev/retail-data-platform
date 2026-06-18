@@ -1,0 +1,57 @@
+name: "1. Doanh thu"
+description: "Tổng quan doanh thu, trend, phân bố theo kênh"
+
+cards:
+  - name: "Doanh thu ngày gần nhất"
+    visualization: scalar
+    position: { row: 0, col: 0, size_x: 6, size_y: 3 }
+    sql: |
+      select sum(total_revenue) as doanh_thu
+      from mart_sales_daily
+      where date = (select max(date) from mart_sales_daily)
+
+  - name: "Số đơn ngày gần nhất"
+    visualization: scalar
+    position: { row: 0, col: 6, size_x: 6, size_y: 3 }
+    sql: |
+      select sum(total_orders) as so_don
+      from mart_sales_daily
+      where date = (select max(date) from mart_sales_daily)
+
+  - name: "Trend doanh thu 30 ngày"
+    visualization: line
+    position: { row: 3, col: 0, size_x: 12, size_y: 6 }
+    sql: |
+      select date, sum(total_revenue) as doanh_thu
+      from mart_sales_daily
+      where date >= current_date - interval '30 days'
+      group by date
+      order by date
+
+  - name: "Doanh thu theo kênh (30 ngày)"
+    visualization: pie
+    position: { row: 9, col: 0, size_x: 6, size_y: 6 }
+    sql: |
+      select
+        case
+          when order_type = 'retail' then 'B2C lẻ'
+          else 'B2B sỉ/contractor'
+        end as kenh,
+        sum(total_revenue) as doanh_thu
+      from mart_sales_daily
+      where date >= current_date - interval '30 days'
+      group by 1
+
+  - name: "Top 10 ngày doanh thu cao nhất (90d)"
+    visualization: table
+    position: { row: 9, col: 6, size_x: 6, size_y: 6 }
+    sql: |
+      select
+        date as "Ngày",
+        sum(total_revenue) as "Doanh thu",
+        sum(total_orders) as "Số đơn"
+      from mart_sales_daily
+      where date >= current_date - interval '90 days'
+      group by date
+      order by "Doanh thu" desc
+      limit 10

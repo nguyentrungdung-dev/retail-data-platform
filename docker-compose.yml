@@ -22,6 +22,14 @@ x-airflow-common: &airflow-common
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
     # Kết nối đến Data Warehouse
     RETAIL_DB_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-dwh:5432/${POSTGRES_DB}
+    # Notifications — đọc từ .env trên host, để trống → channel tắt êm
+    ZALO_WEBHOOK_URL: ${ZALO_WEBHOOK_URL:-}
+    SMTP_HOST:        ${SMTP_HOST:-}
+    SMTP_PORT:        ${SMTP_PORT:-587}
+    SMTP_USER:        ${SMTP_USER:-}
+    SMTP_PASSWORD:    ${SMTP_PASSWORD:-}
+    SMTP_FROM:        ${SMTP_FROM:-}
+    SMTP_TO:          ${SMTP_TO:-}
   volumes:
     - ./dags:/opt/airflow/dags
     - ./ingestion:/opt/airflow/ingestion
@@ -156,7 +164,8 @@ services:
     container_name: retail_pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@retail.local
+      # pgAdmin 8+ validate email strict, không chấp nhận TLD .local
+      PGADMIN_DEFAULT_EMAIL: admin@retail.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"

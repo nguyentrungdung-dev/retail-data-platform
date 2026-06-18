@@ -1,0 +1,44 @@
+name: "2. Top sản phẩm"
+description: "Sản phẩm bán chạy nhất theo doanh thu, số lượng, theo nhóm/brand"
+
+cards:
+  - name: "Top 10 sản phẩm theo doanh thu (90d)"
+    visualization: row
+    position: { row: 0, col: 0, size_x: 12, size_y: 6 }
+    sql: |
+      select product_name, total_revenue
+      from mart_product_performance
+      where revenue_rank <= 10
+      order by revenue_rank
+
+  - name: "Top 10 sản phẩm theo số lượng (90d)"
+    visualization: row
+    position: { row: 6, col: 0, size_x: 12, size_y: 6 }
+    sql: |
+      select product_name, total_qty_sold
+      from mart_product_performance
+      where qty_rank <= 10
+      order by qty_rank
+
+  - name: "Doanh thu theo nhóm hàng"
+    visualization: pie
+    position: { row: 12, col: 0, size_x: 6, size_y: 6 }
+    sql: |
+      select
+        coalesce(category_l1, 'Khác') as nhom_hang,
+        sum(total_revenue) as doanh_thu
+      from mart_product_performance
+      group by nhom_hang
+      order by doanh_thu desc
+
+  - name: "Top 10 thương hiệu"
+    visualization: row
+    position: { row: 12, col: 6, size_x: 6, size_y: 6 }
+    sql: |
+      select
+        coalesce(brand, 'Không rõ') as brand,
+        sum(total_revenue) as doanh_thu
+      from mart_product_performance
+      group by brand
+      order by doanh_thu desc
+      limit 10
