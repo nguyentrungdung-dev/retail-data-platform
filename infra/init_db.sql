@@ -76,4 +76,45 @@ CREATE INDEX IF NOT EXISTS idx_raw_orders_date     ON raw_orders(order_date);
 CREATE INDEX IF NOT EXISTS idx_raw_orders_product  ON raw_orders(product_code);
 CREATE INDEX IF NOT EXISTS idx_raw_inventory_date  ON raw_inventory(snapshot_date);
 
+-- ════════════════════════════════════════════
+-- ML / Forecast layer (Step 12)
+-- ════════════════════════════════════════════
+
+-- ── Metadata mỗi lần chạy forecast ──
+-- Mỗi run = 1 lần job Prophet chạy, ghi lại tham số + status để debug.
+CREATE TABLE IF NOT EXISTS raw_forecast_runs (
+    run_id          VARCHAR(64) PRIMARY KEY,           -- uuid hoặc timestamp
+    run_started_at  TIMESTAMP   NOT NULL,
+    run_finished_at TIMESTAMP,
+    horizon_days    INT         NOT NULL,              -- số ngày forecast
+    train_window_days INT,                             -- bao nhiêu ngày data để train
+    sku_count       INT,                               -- số SKU đã forecast
+    sku_skipped     INT         DEFAULT 0,             -- SKU bị skip do thiếu data
+    status          VARCHAR(20) DEFAULT 'RUNNING',     -- RUNNING/SUCCESS/FAILED
+    error_message   TEXT,
+    avg_mape        NUMERIC(6,2),                      -- Mean Absolute Percentage Error trung bình
+    notes           TEXT
+);
+
+-- ── Kết quả forecast theo từng (run_id, product_code, ds) ──
+-- Dùng partial unique để upsert: nếu chạy lại cùng run_id → update.
+CREATE TABLE IF NOT EXISTS raw_forecast_results (
+    run_id          VARCHAR(64) NOT NULL,
+    product_code    VARCHAR(50) NOT NULL,
+    ds              DATE        NOT NULL,             -- ngày forecast
+    yhat            NUMERIC(12,2),                    -- giá trị dự báo (qty_sold)
+    yhat_lower      NUMERIC(12,2),                    -- cận dưới interval 80%
+    yhat_upper      NUMERIC(12,2),                    -- cận trên interval 80%
+    is_actual       BOOLEAN     DEFAULT FALSE,        -- TRUE = ngày trong quá khứ (để compare)
+    actual_qty      NUMERIC(12,2),                    -- nếu is_actual=TRUE thì điền thực tế
+    model_type      VARCHAR(20) DEFAULT 'prophet',
+    created_at      TIMESTAMP   DEFAULT NOW(),
+    PRIMARY KEY (run_id, product_code, ds),
+    FOREIGN KEY (run_id) REFERENCES raw_forecast_runs(run_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_forecast_results_product ON raw_forecast_results(product_code);
+CREATE INDEX IF NOT EXISTS idx_forecast_results_ds      ON raw_forecast_results(ds);
+CREATE INDEX IF NOT EXISTS idx_forecast_runs_started    ON raw_forecast_runs(run_started_at);
+
 SELECT 'Database initialized successfully' AS status;

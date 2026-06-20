@@ -17,7 +17,7 @@ models:
           - not_null
 
   - name: mart_rfm
-    description: "Phân khúc khách hàng RFM"
+    description: "Phân khúc khách hàng RFM (NTILE quantile-based)"
     columns:
       - name: customer_id
         tests:
@@ -28,25 +28,82 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['CHAMPIONS', 'LOYAL', 'NEW CUSTOMER',
-                       'POTENTIAL', 'AT RISK', 'LOST', 'OTHERS']
+              values:
+                - 'CHAMPIONS'
+                - 'LOYAL'
+                - 'NEW_CUSTOMER'
+                - 'POTENTIAL_LOYAL'
+                - 'PROMISING'
+                - 'RECENT_LOW_VALUE'
+                - 'NEED_ATTENTION'
+                - 'CANT_LOSE'
+                - 'AT_RISK'
+                - 'HIBERNATING'
+                - 'LOST'
+                - 'OTHERS'
 
       - name: r_score
         tests:
           - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]
+              quote: false
 
       - name: f_score
         tests:
           - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]
+              quote: false
 
       - name: m_score
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]
+              quote: false
+
+      - name: predicted_clv_2y
+        description: "CLV dự báo trong 2 năm (VND)"
+        tests:
+          - not_null
+
+  - name: mart_customer_360
+    description: >
+      Customer 360 — gộp RFM + churn probability + engagement score + CRM priority.
+      Dùng cho dashboard CRM và list mục tiêu marketing.
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+
+      - name: health_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['HEALTHY', 'WATCHING', 'AT_RISK', 'CHURNED']
+
+      - name: engagement_score
+        tests:
+          - not_null
+
+      - name: churn_probability
+        description: "Xác suất khách rời đi (0-1)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and churn_probability <= 1"
+
+      - name: crm_priority_score
         tests:
           - not_null
 
   - name: mart_product_performance
     description: "Hiệu suất sản phẩm 90 ngày"
     columns:
-      - name: product_c
+      - name: product_code
+        tests:
           - unique
           - not_null
 
@@ -54,3 +111,42 @@ models:
         tests:
           - accepted_values:
               values: ['BÁN CHẠY', 'BÌNH THƯỜNG', 'CHẬM', 'CHẬM BÁN']
+
+  - name: mart_demand_forecast
+    description: >
+      Demand forecast 90 ngày tới (Prophet) tổng hợp theo SKU,
+      kèm reorder suggestion + alert tồn kho.
+    columns:
+      - name: product_code
+        tests:
+          - unique
+          - not_null
+
+      - name: forecast_qty_30d
+        tests:
+          - not_null
+
+      - name: forecast_qty_90d
+        tests:
+          - not_null
+
+      - name: forecast_trust
+        tests:
+          - accepted_values:
+              values: ['HIGH', 'MEDIUM', 'LOW', 'UNRELIABLE']
+
+      - name: stock_alert
+        tests:
+          - accepted_values:
+              values:
+                - 'OUT_OF_STOCK'
+                - 'CRITICAL_LOW'
+                - 'NEED_REORDER'
+                - 'ADEQUATE'
+                - 'OVERSTOCK'
+
+      - name: suggested_reorder_qty
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"

@@ -41,3 +41,31 @@ sources:
 
       - name: raw_inventory
         description: "Snapshot tồn kho theo ngày"
+
+      - name: raw_forecast_runs
+        description: "Metadata mỗi lần chạy forecast (Prophet job)"
+        columns:
+          - name: run_id
+            tests:
+              - unique
+              - not_null
+          - name: status
+            tests:
+              - accepted_values:
+                  values: ['RUNNING', 'SUCCESS', 'FAILED']
+
+      - name: raw_forecast_results
+        description: "Output forecast Prophet, mỗi row = 1 (run_id, sku, date)"
+        columns:
+          - name: run_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw', 'raw_forecast_runs')
+                  field: run_id
+          - name: product_code
+            tests:
+              - not_null
+          - name: ds
+            tests:
+              - not_null

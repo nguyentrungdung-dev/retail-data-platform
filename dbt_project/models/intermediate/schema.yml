@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: int_customer_metrics
+    description: >
+      Customer-level metrics base table — tổng hợp mọi chỉ số cho 1 khách hàng
+      trong 12 tháng gần nhất, có so sánh với 12 tháng trước đó.
+    columns:
+      - name: customer_id
+        description: "Mã khách hàng, KHÔNG phải UNKNOWN"
+        tests:
+          - unique
+          - not_null
+
+      - name: order_count
+        description: "Số đơn hàng trong 365 ngày"
+        tests:
+          - not_null
+
+      - name: total_revenue
+        tests:
+          - not_null
+
+      - name: recency_days
+        description: "Số ngày kể từ đơn cuối"
+        tests:
+          - not_null
+
+      - name: customer_segment_b2b_b2c
+        tests:
+          - accepted_values:
+              values: ['B2B', 'B2C']
+
+  - name: int_demand_history
+    description: >
+      Daily demand history theo SKU, đã fill 0 cho ngày không có đơn.
+      Là input cho Prophet forecast.
+    columns:
+      - name: product_code
+        tests:
+          - not_null
+      - name: ds
+        description: "Date (Prophet convention)"
+        tests:
+          - not_null
+      - name: qty_sold
+        tests:
+          - not_null
+
+    tests:
+      # Composite unique: 1 SKU không trùng ngày
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - product_code
+            - ds
+
+  - name: int_product_seasonality
+    description: >
+      Seasonal index của từng sản phẩm theo tháng (1-12).
+      seasonal_index > 1 = tháng cao điểm, < 1 = tháng thấp điểm.
+    columns:
+      - name: product_code
+        tests:
+          - not_null
+      - name: month
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+              quote: false
+      - name: seasonal_index
+        tests:
+          - not_null
+      - name: season_status
+        tests:
+          - accepted_values:
+              values: ['PEAK', 'HIGH', 'NORMAL', 'LOW', 'OFF_SEASON']

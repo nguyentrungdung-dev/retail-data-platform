@@ -20,3 +20,10 @@ isort==5.13.2
 # Utils
 loguru==0.7.2
 click==8.1.7
+
+# ML / Forecasting (Step 12)
+# prophet 1.1.5+ tương thích với Python 3.11 và pandas 2.x
+# cmdstanpy là backend Stan, holidays cho VN holidays
+prophet==1.1.5
+cmdstanpy==1.2.4
+holidays==0.45

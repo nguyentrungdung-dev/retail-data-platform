@@ -130,10 +130,17 @@ with DAG(
     # dbt sống ở virtualenv /opt/dbt-venv (xem Dockerfile.airflow) để tránh
     # dependency conflict với Airflow. Gọi binary tuyệt đối, KHÔNG dùng `dbt`
     # trực tiếp vì nó không có trong PATH của Airflow.
+    #
+    # Build TẤT CẢ models bao gồm cả mart_demand_forecast (tồn kho hàng ngày
+    # thay đổi → reorder suggestion phải refresh). Forecast Prophet thì chạy
+    # weekly (xem dags/weekly_forecast.py), còn dbt build thì daily.
     t3_dbt = BashOperator(
         task_id="dbt_build",
         bash_command=(
             "cd /opt/airflow/dbt_project && "
+            "/opt/dbt-venv/bin/dbt deps "
+            "--profiles-dir /opt/airflow/dbt_project "
+            "--project-dir /opt/airflow/dbt_project && "
             "/opt/dbt-venv/bin/dbt build "
             "--profiles-dir /opt/airflow/dbt_project "
             "--project-dir /opt/airflow/dbt_project"

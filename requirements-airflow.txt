@@ -9,3 +9,10 @@
 openpyxl
 python-dotenv
 loguru
+
+# ML / Forecasting (Step 12) — chỉ cài trong Airflow container
+# Prophet kéo theo cmdstanpy (backend Stan compiler)
+# KHÔNG pin chặt để Airflow constraints xử lý dependency
+prophet
+cmdstanpy
+holidays

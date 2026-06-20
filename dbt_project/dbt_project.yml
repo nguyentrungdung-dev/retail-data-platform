@@ -12,9 +12,20 @@ macro-paths: ["macros"]
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
+vars:
+  # Ngưỡng số ngày tối thiểu 1 SKU phải có doanh số mới được forecast.
+  # Prophet cần ≥ 2 chu kỳ (~60 ngày) để học seasonality tốt nhất; 30 là
+  # mức tối thiểu chấp nhận được. Dev/demo có thể override = 7 qua CLI:
+  #   dbt build --vars '{min_sales_days: 7}'
+  min_sales_days: 30
+
 models:
   dbt_project:
     staging:
       +materialized: view
+    intermediate:
+      # Intermediate dùng làm input cho Prophet (qua SQL query) → cần là table
+      # để Python pandas đọc nhanh, không phải tính lại từ view mỗi lần.
+      +materialized: table
     marts:
       +materialized: table
