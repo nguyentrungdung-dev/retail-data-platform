@@ -316,25 +316,6 @@ Mỗi DAG có:
 
 ---
 
-## 🗺 Roadmap
-
-### ✅ Đã hoàn thành
-- [x] Bước 1-11: Foundation (Docker + Postgres + Airflow + dbt + Metabase)
-- [x] Bước 12: Advanced analytics (RFM nâng cao + Prophet forecasting)
-- [x] Bước 13: KiotViet API integration (polling 15 phút)
-
-### 🚧 Future enhancements
-- [ ] Webhook receiver cho real-time < 5s (KiotViet push events)
-- [ ] Power BI dataset refresh DAG (`weekly_report.py`)
-- [ ] Metabase dashboards as code (provision qua API)
-- [ ] Prophet model improvements: exogenous regressors (giá, promotion)
-- [ ] Data quality monitoring (Great Expectations / Soda)
-- [ ] CI/CD pipeline (GitHub Actions: lint + test + dbt compile)
-- [ ] Terraform IaC để migrate lên AWS/GCP
-- [ ] Slack notifications (thay Zalo cho team distributed)
-
----
-
 ## 📚 Documentation
 
 - [`CLAUDE.md`](CLAUDE.md) — Project context cho AI agents
