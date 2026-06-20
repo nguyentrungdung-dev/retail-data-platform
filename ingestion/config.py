@@ -28,6 +28,34 @@ DB_URL = os.getenv("RETAIL_DB_CONN") or (
     f"@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
 )
 
+# ── KiotViet API (Bước 13) ────────────────────────────────────────────
+# Tách hẳn vào dict riêng để dễ test/mock và tránh import shadowing.
+# Tất cả là Optional (rỗng → KiotViet sync sẽ fail có thông báo rõ).
+KIOTVIET_CONFIG = {
+    "base_url":       os.getenv("KIOTVIET_BASE_URL", "https://public.kiotapi.com"),
+    "token_url":      os.getenv("KIOTVIET_TOKEN_URL", "https://id.kiotviet.vn/connect/token"),
+    "client_id":      os.getenv("KIOTVIET_CLIENT_ID", ""),
+    "client_secret":  os.getenv("KIOTVIET_CLIENT_SECRET", ""),
+    "retailer":       os.getenv("KIOTVIET_RETAILER", ""),
+    "branch_ids":     [
+        int(x.strip()) for x in os.getenv("KIOTVIET_BRANCH_IDS", "").split(",")
+        if x.strip().isdigit()
+    ],
+    "page_size":      int(os.getenv("KIOTVIET_PAGE_SIZE", "100")),
+    "initial_lookback_days": int(os.getenv("KIOTVIET_INITIAL_LOOKBACK_DAYS", "30")),
+    "request_timeout": int(os.getenv("KIOTVIET_REQUEST_TIMEOUT", "30")),
+}
+
+
+def kiotviet_is_configured() -> bool:
+    """True nếu đủ credentials để chạy sync. Dùng để skip task nếu chưa setup."""
+    return all([
+        KIOTVIET_CONFIG["client_id"],
+        KIOTVIET_CONFIG["client_secret"],
+        KIOTVIET_CONFIG["retailer"],
+    ])
+
+
 # Logging
 logger.add(
     "logs/ingestion_{time:YYYY-MM-DD}.log",

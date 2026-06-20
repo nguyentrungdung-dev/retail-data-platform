@@ -117,4 +117,38 @@ CREATE INDEX IF NOT EXISTS idx_forecast_results_product ON raw_forecast_results(
 CREATE INDEX IF NOT EXISTS idx_forecast_results_ds      ON raw_forecast_results(ds);
 CREATE INDEX IF NOT EXISTS idx_forecast_runs_started    ON raw_forecast_runs(run_started_at);
 
+-- ════════════════════════════════════════════
+-- Sync state layer (Step 13 — KiotViet API)
+-- ════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS _sync_state (
+    source_system   VARCHAR(50) NOT NULL,
+    entity_name     VARCHAR(50) NOT NULL,
+    last_synced_at  TIMESTAMP   NOT NULL,
+    last_run_at     TIMESTAMP   NOT NULL DEFAULT NOW(),
+    last_run_status VARCHAR(20) NOT NULL DEFAULT 'SUCCESS',
+    rows_fetched    INT         NOT NULL DEFAULT 0,
+    rows_upserted   INT         NOT NULL DEFAULT 0,
+    error_message   TEXT,
+    PRIMARY KEY (source_system, entity_name)
+);
+
+CREATE TABLE IF NOT EXISTS _sync_history (
+    sync_id          BIGSERIAL   PRIMARY KEY,
+    source_system    VARCHAR(50) NOT NULL,
+    entity_name      VARCHAR(50) NOT NULL,
+    started_at       TIMESTAMP   NOT NULL DEFAULT NOW(),
+    finished_at      TIMESTAMP,
+    duration_ms      INT,
+    status           VARCHAR(20) NOT NULL DEFAULT 'RUNNING',
+    rows_fetched     INT         DEFAULT 0,
+    rows_upserted    INT         DEFAULT 0,
+    error_message    TEXT,
+    sync_window_from TIMESTAMP,
+    sync_window_to   TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_history_started ON _sync_history(started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sync_history_entity  ON _sync_history(source_system, entity_name);
+
 SELECT 'Database initialized successfully' AS status;

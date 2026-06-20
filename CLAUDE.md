@@ -81,11 +81,21 @@ retail-data-platform/
 │   ├── __init__.py
 │   ├── config.py                ← Load .env, logging setup
 │   ├── sources/
-│   │   ├── kiotviet.py          ← KiotViet API extractor
-│   │   ├── excel.py             ← Excel/Google Sheets extractor
-│   │   └── manual_entry.py     ← Form nhập tay đơn giản
+│   │   ├── kiotviet/            ← KiotViet API package (PRIMARY source)
+│   │   │   ├── auth.py          ← OAuth2 token manager (cache 23h)
+│   │   │   ├── client.py        ← HTTP client (retry, pagination, rate limit)
+│   │   │   ├── extractors.py    ← 5 extract functions
+│   │   │   ├── transformers.py  ← Map KiotViet schema → raw_*
+│   │   │   └── runner.py        ← Orchestrate sync 5 entities
+│   │   ├── excel.py             ← FALLBACK: nhập từ Excel khi API down
+│   │   └── manual_entry.py     ← FALLBACK: form nhập tay
+│   ├── forecasting/             ← Prophet ML (Bước 12)
+│   │   ├── prophet_forecast.py
+│   │   ├── seasonality.py       ← VN holidays cho Prophet
+│   │   └── runner.py
 │   ├── loaders/
-│   │   └── postgres_loader.py  ← Upsert vào raw_* tables
+│   │   ├── postgres_loader.py  ← Upsert vào raw_* tables
+│   │   └── sync_state.py        ← Track incremental sync (Bước 13)
 │   └── utils/
 │       ├── logger.py
 │       └── validators.py
@@ -103,10 +113,17 @@ retail-data-platform/
 │   └── tests/                   ← dbt data tests
 │
 ├── dags/                        ← Airflow DAGs
-│   ├── daily_etl.py             ← Main pipeline DAG
-│   ├── weekly_report.py         ← Trigger Power BI refresh
+│   ├── daily_etl.py             ← Daily 02:00 — Excel + dbt build
+│   ├── kiotviet_polling_etl.py  ← Mỗi 15' — sync KiotViet incremental
+│   ├── weekly_forecast.py       ← Chủ Nhật 03:00 — Prophet forecast 90d
 │   └── utils/
 │       └── alerts.py            ← Zalo/Email notification
+
+├── infra/
+│   ├── init_db.sql              ← DDL khởi tạo (chỉ chạy lần đầu)
+│   └── migrations/              ← SQL migrations cho schema thay đổi
+│       ├── 001_forecast_tables.sql
+│       └── 002_sync_state.sql
 │
 ├── dashboards/
 │   ├── power_bi/                ← .pbix files
